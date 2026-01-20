@@ -1,56 +1,21 @@
 version: "3.5"
+
 services:
-  zk-1:
+  zookeeper:
     image: confluentinc/cp-zookeeper:${version_confluent}
-    hostname: zk-1
+    hostname: zookeeper
     networks:
       - workshop
     volumes:
       - ./agents:/agents
-      - data-zk-1:/var/lib/zookeeper
+      - data-zookeeper:/var/lib/zookeeper
     environment:
-      ZOOKEEPER_SERVER_ID: 1
       ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 4000
-      ZOOKEEPER_INIT_LIMIT: 5
-      ZOOKEEPER_SYNC_LIMIT: 2
-      ZOOKEEPER_SERVERS: zk-1:2888:3888;zk-2:2888:3888;zk-3:2888:3888
+      ZOOKEEPER_TICK_TIME: 2000
     
-  zk-2:
-    image: confluentinc/cp-zookeeper:${version_confluent}
-    hostname: zk-2
-    networks:
-      - workshop
-    volumes:
-      - ./agents:/agents
-      - data-zk-2:/var/lib/zookeeper
-    environment:
-      ZOOKEEPER_SERVER_ID: 2
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 4000
-      ZOOKEEPER_INIT_LIMIT: 5
-      ZOOKEEPER_SYNC_LIMIT: 2
-      ZOOKEEPER_SERVERS: zk-1:2888:3888;zk-2:2888:3888;zk-3:2888:3888
-
-  zk-3:
-    image: confluentinc/cp-zookeeper:${version_confluent}
-    hostname: zk-3
-    networks:
-      - workshop
-    volumes:
-      - ./agents:/agents
-      - data-zk-3:/var/lib/zookeeper
-    environment:
-      ZOOKEEPER_SERVER_ID: 3
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 4000
-      ZOOKEEPER_INIT_LIMIT: 5
-      ZOOKEEPER_SYNC_LIMIT: 2
-      ZOOKEEPER_SERVERS: zk-1:2888:3888;zk-2:2888:3888;zk-3:2888:3888
-
-  kafka-1:
-    image: "confluentinc/cp-enterprise-kafka:${version_confluent}"
-    hostname: kafka-1
+  kafka:
+    image: confluentinc/cp-kafka:${version_confluent}
+    hostname: kafka
     networks:
       - workshop
     ports:
@@ -58,64 +23,54 @@ services:
       - 1098:1098
     volumes:
       - ./agents:/agents
-      - data-kafka-1:/var/lib/kafka/data
+      - data-kafka:/var/lib/kafka/data
+    depends_on:
+      - zookeeper
     environment:
-      KAFKA_BROKER_ID: 101
-      KAFKA_ZOOKEEPER_CONNECT: zk-1:2181,zk-2:2181,zk-3:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_DELETE_TOPIC_ENABLE: "true"
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG_RETENTION_HOURS: 6
-      KAFKA_METRIC_REPORTERS: "io.confluent.metrics.reporter.ConfluentMetricsReporter"
-      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka-1:9092,kafka-2:9092,kafka-3:9092"
       KAFKA_JMX_OPTS: "${JMX_ARGS}"
 
-  kafka-2:
-    image: "confluentinc/cp-enterprise-kafka:${version_confluent}"
-    hostname: kafka-2
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:${version_confluent}
+    hostname: kafka-connect
     networks:
       - workshop
+    ports:
+      - 8083:8083
     volumes:
       - ./agents:/agents
-      - data-kafka-2:/var/lib/kafka/data
+      - data-kafka-connect:/var/lib/kafka/data
+    depends_on:
+      - kafka
     environment:
-      KAFKA_BROKER_ID: 102
-      KAFKA_ZOOKEEPER_CONNECT: zk-1:2181,zk-2:2181,zk-3:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_DELETE_TOPIC_ENABLE: "true"
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
-      KAFKA_LOG_RETENTION_HOURS: 6
-      KAFKA_METRIC_REPORTERS: "io.confluent.metrics.reporter.ConfluentMetricsReporter"
-      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka-1:9092,kafka-2:9092,kafka-3:9092"
-
-  kafka-3:
-    image: "confluentinc/cp-enterprise-kafka:${version_confluent}"
-    hostname: kafka-3
-    networks:
-      - workshop
-    volumes:
-      - ./agents:/agents
-      - data-kafka-3:/var/lib/kafka/data
-    environment:
-      KAFKA_BROKER_ID: 103
-      KAFKA_ZOOKEEPER_CONNECT: zk-1:2181,zk-2:2181,zk-3:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:9092
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_DELETE_TOPIC_ENABLE: "true"
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
-      KAFKA_LOG_RETENTION_HOURS: 6
-      KAFKA_METRIC_REPORTERS: "io.confluent.metrics.reporter.ConfluentMetricsReporter"
-      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka-1:9092,kafka-2:9092,kafka-3:9092"
+      CONNECT_BOOTSTRAP_SERVERS: "kafka:9092"
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: "connect-cluster"
+      CONNECT_CONFIG_STORAGE_TOPIC: "connect-configs"
+      CONNECT_OFFSET_STORAGE_TOPIC: "connect-offsets"
+      CONNECT_STATUS_STORAGE_TOPIC: "connect-status"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
 
 volumes:
-  data-zk-1:
-  data-zk-2:
-  data-zk-3:
-  data-kafka-1:
-  data-kafka-2:
-  data-kafka-3:
+  data-zookeeper:
+  data-kafka:
+  data-kafka-connect:
 
 networks:
   workshop:
