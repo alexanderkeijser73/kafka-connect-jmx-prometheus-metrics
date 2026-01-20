@@ -44,6 +44,8 @@ services:
       - workshop
     ports:
       - 8083:8083
+      - 1099:1099  # JMX port
+      - 7071:7071  # Prometheus JMX exporter port
     volumes:
       - ./agents:/agents
       - data-kafka-connect:/var/lib/kafka/data
