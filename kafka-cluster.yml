@@ -3,7 +3,7 @@ version: "3.5"
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:${version_confluent}
-    hostname: zookeeper
+    hostname: zk-1
     networks:
       - workshop
     volumes:
@@ -15,7 +15,7 @@ services:
     
   kafka:
     image: confluentinc/cp-kafka:${version_confluent}
-    hostname: kafka
+    hostname: kafka-1
     networks:
       - workshop
     ports:
@@ -28,14 +28,20 @@ services:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ZOOKEEPER_CONNECT: zk-1:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_DELETE_TOPIC_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG_RETENTION_HOURS: 6
+      KAFKA_JMX_OPTS: "${JMX_ARGS}"
+      # source: https://stackoverflow.com/questions/77467885/i-configured-javaagent-for-kafka-jmx-exporter-and-now-i-cant-create-topic-or-ge
+      EXTRA_ARGS: "-javaagent:/agents/jmx_prometheus_javaagent-0.10.jar=7071:/agents/kafka.yaml"
+      JMX_PROMETHEUS_PORT: 7071
+
+
 
   kafka-connect:
     image: confluentinc/cp-kafka-connect:${version_confluent}
@@ -70,6 +76,9 @@ services:
       # JMX Configuration
       KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka-connect -Dcom.sun.management.jmxremote.rmi.port=1099"
       KAFKA_JMX_PORT: 1099
+      # source: https://stackoverflow.com/questions/77467885/i-configured-javaagent-for-kafka-jmx-exporter-and-now-i-cant-create-topic-or-ge
+      EXTRA_ARGS: "-javaagent:/agents/jmx_prometheus_javaagent-0.10.jar=7071:/agents/kafka-connect.yaml"
+      JMX_PROMETHEUS_PORT: 707k
 
 volumes:
   data-zookeeper:
