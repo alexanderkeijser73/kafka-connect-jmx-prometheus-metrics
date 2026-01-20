@@ -36,7 +36,6 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG_RETENTION_HOURS: 6
-      KAFKA_JMX_OPTS: "${JMX_ARGS}"
 
   kafka-connect:
     image: confluentinc/cp-kafka-connect:${version_confluent}
@@ -66,6 +65,9 @@ services:
       CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
       CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+      # JMX Configuration
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka-connect -Dcom.sun.management.jmxremote.rmi.port=1099"
+      KAFKA_JMX_PORT: 1099
 
 volumes:
   data-zookeeper:
