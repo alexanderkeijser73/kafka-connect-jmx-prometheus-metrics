@@ -58,7 +58,7 @@ services:
     depends_on:
       - kafka
     environment:
-      CONNECT_BOOTSTRAP_SERVERS: "kafka:9092"
+      CONNECT_BOOTSTRAP_SERVERS: "kafka-1:9092"
       CONNECT_REST_PORT: 8083
       CONNECT_GROUP_ID: "connect-cluster"
       CONNECT_CONFIG_STORAGE_TOPIC: "connect-configs"
